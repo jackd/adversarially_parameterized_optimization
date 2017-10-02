@@ -1,0 +1,10 @@
+{
+  "dataset": "h3m_consistent_scaled_c1",
+  "wgan_type": "gradient_penalized",
+  "n_z": 32,
+  "activation": "relu",
+  "n_g": [128, 64],
+  "n_c": [128, 64],
+  "batch_size": 128,
+  "eval_fps": 10
+}
