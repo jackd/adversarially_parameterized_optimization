@@ -1,41 +1,19 @@
-"""Provides GAN for parameterization."""
+"""Provides GAN for parameterization/feasibility loss learning."""
 from __future__ import division
-import os
-import json
 import numpy as np
 import tensorflow as tf
 from gan_tf.w_gan import WeightClippedWGan, GradientPenalizedWGan
 from human_pose_util.register import skeleton_register, dataset_register
 from human_pose_util.skeleton import front_angle
 from human_pose_util.transforms.np_impl import rotate_about
+from adversarially_parameterized_optimization.serialization import \
+    load_gan_params, gan_model_dir
 
-_root_dir = os.path.realpath(os.path.dirname(__file__))
 
 _activations = {
     'relu': tf.nn.relu,
     'elu': tf.nn.elu
 }
-
-
-def params_path(model_name):
-    """Get path to model parameter file."""
-    return os.path.join(_root_dir, 'params', '%s.json' % model_name)
-
-
-def model_dir(model_name):
-    """Get the directory used by the GAN to save."""
-    return os.path.join(_root_dir, 'models', model_name)
-
-
-def load_params(model_name):
-    """Load model parameters for the specified model."""
-    path = params_path(model_name)
-    if not os.path.isfile(path):
-        raise ValueError('No parameter file for model %s at %s'
-                         % (model_name, path))
-    with open(path, 'r') as f:
-        params = json.load(f)
-    return params
 
 
 def _get_n_joints(params):
@@ -133,14 +111,14 @@ def get_real_sample(params):
     return p3
 
 
-def pose_gan(model_name, config=None):
+def pose_gan(gan_id, config=None):
     """Get the named GAN. See `params_path` to view parameters."""
-    params = load_params(model_name)
+    params = load_gan_params(gan_id)
     wgan_type = params['wgan_type']
     args = [get_generator_sample, get_critic_logits]
     kwargs = dict(
-        config=config, params=params, model_dir=model_dir(model_name),
-        name=model_name)
+        config=config, params=params, model_dir=gan_model_dir(gan_id),
+        name=gan_id)
     if wgan_type == 'weight_clipped':
         return WeightClippedWGan(*args, **kwargs)
     elif wgan_type == 'gradient_penalized':

@@ -1,0 +1,9 @@
+{
+  "dataset": "h3m_consistent_scaled_c1_10fps",
+  "gan_id": "big",
+  "critic_weight": 0,
+  "smoothness_weight": 0,
+  "glid_weighte": 0,
+  "consistency_weight": 1.0,
+  "tol": 1e-9
+}
