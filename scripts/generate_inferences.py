@@ -5,18 +5,46 @@ import h5py
 from time import time
 from adversarially_parameterized_optimization.gan import \
     get_generator_sample, get_critic_logits
-from human_pose_util.register import dataset_register
+from human_pose_util.register import dataset_register, skeleton_register
+from human_pose_util.skeleton import s24_to_s14_converter, s16_to_s14_converter
 from human_pose_util.transforms.tf_impl import tf_impl
 from adversarially_parameterized_optimization.serialization import \
     load_inference_params, load_gan_params, gan_model_dir, results_path
+from human_pose_util.dataset.h3m.skeleton import s24
+from human_pose_util.dataset.eva.skeleton import s16, s14
 
 
-def infer_sequence_poses(gan_id, p2, r, t, f, c, dt, loss_weights, tol):
+def infer_sequence_poses(
+        gan_id, p2, r, t, f, c, dt, loss_weights, tol, target_skeleton=None):
     """Get 3d pose inference in world coordinates for a sequence."""
     # p2, r, t, f, c = (example[k] for k in ['p3c', 'r', 't', 'f', 'c'])
     params = load_gan_params(gan_id)
     n_z = params['n_z']
     n_frames = len(p2)
+
+    if target_skeleton is None:
+        convert = None
+    else:
+        train_dataset = dataset_register[params['dataset']]['train']
+        output_skeleton = skeleton_register[train_dataset.attrs['skeleton_id']]
+        if output_skeleton == s24:
+            if target_skeleton == s14:
+                convert = s24_to_s14_converter().convert_tf
+            elif target_skeleton == s24:
+                convert = None
+            else:
+                raise ValueError('Not valid skeleton combination')
+        elif output_skeleton == s16:
+            if target_skeleton == s14:
+                convert = s16_to_s14_converter().convert_tf
+            elif target_skeleton == s16:
+                convert = None
+            else:
+                raise ValueError('Not valid skeleton combination')
+        elif output_skeleton == s14:
+            convert = None
+        else:
+            raise ValueError('Not valid skeleton combination')
 
     graph = tf.Graph()
     with graph.as_default():
@@ -39,6 +67,8 @@ def infer_sequence_poses(gan_id, p2, r, t, f, c, dt, loss_weights, tol):
 
         normalized_p3 = get_generator_sample(z, params, reuse=False)
         critic_logits = get_critic_logits(normalized_p3, params, False)
+        if convert is not None:
+            normalized_p3 = convert(normalized_p3)
         p3w = tf_impl.rotate_about(
             normalized_p3*scale, tf.expand_dims(phi, axis=-1), dim=2)
         offset = tf.stack([x0, y0, tf.zeros_like(x0)], axis=-1)
@@ -53,7 +83,8 @@ def infer_sequence_poses(gan_id, p2, r, t, f, c, dt, loss_weights, tol):
         losses['smoothness'] = tf.nn.l2_loss(vel)
         speed2 = tf.reduce_sum(vel**2, axis=2)
         losses['glide'] = tf.reduce_sum(tf.reduce_min(speed2, axis=1))
-        loss_terms = [losses[k]*v for k, v in loss_weights.items() if v > 0]
+        loss_terms = [
+            losses[k[:-7]]*v for k, v in loss_weights.items() if v > 0]
         if len(loss_terms) == 0:
             raise Exception('At least one of loss_weights must be positive')
         elif len(loss_terms) == 1:
@@ -109,8 +140,9 @@ def generate_all(inference_id, overwrite=False):
             example = dataset[key]
             p2 = example['p2']
             r, t, f, c = (example.attrs[k] for k in ['r', 't', 'f', 'c'])
+            target_skeleton = skeleton_register[dataset.attrs['skeleton_id']]
             p3w, dt = infer_sequence_poses(
-                gan_id, p2, r, t, f, c, dt, loss_weights, tol)
+                gan_id, p2, r, t, f, c, dt, loss_weights, tol, target_skeleton)
             n_frames = len(p2)
             fps = n_frames / dt
             print('Completed %d frames in %.2fs @ %.2f fps'

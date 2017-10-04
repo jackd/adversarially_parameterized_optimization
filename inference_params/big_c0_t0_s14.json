@@ -1,5 +1,5 @@
 {
-  "dataset": "h3m_consistent_scaled_c1_10fps",
+  "dataset": "h3m_s14_consistent_scaled_c1_10fps",
   "gan_id": "big",
   "critic_weight": 0,
   "smoothness_weight": 0,
