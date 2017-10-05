@@ -3,13 +3,13 @@ import numpy as np
 import tensorflow as tf
 import h5py
 from time import time
-from adversarially_parameterized_optimization.gan import \
-    get_generator_sample, get_critic_logits
-from human_pose_util.register import dataset_register, skeleton_register
-from human_pose_util.skeleton import s24_to_s14_converter, s16_to_s14_converter
-from human_pose_util.transforms.tf_impl import tf_impl
-from adversarially_parameterized_optimization.serialization import \
+from gan import get_generator_sample, get_critic_logits
+from serialization import \
     load_inference_params, load_gan_params, gan_model_dir, results_path
+from human_pose_util.register import dataset_register, skeleton_register
+from human_pose_util.skeleton import s24_to_s14_converter
+from human_pose_util.dataset.eva.skeleton import s16_to_s14_converter
+from human_pose_util.transforms.tf_impl import tf_impl
 from human_pose_util.dataset.h3m.skeleton import s24
 from human_pose_util.dataset.eva.skeleton import s16, s14
 
@@ -117,7 +117,6 @@ def generate_all(inference_id, overwrite=False):
     gan_id = inference_params['gan_id']
     dataset_id = inference_params['dataset']
     dataset = dataset_register[dataset_id]['eval']
-    dt = 1./dataset.attrs['fps']
     loss_weights = {k: inference_params[k] for k in [
         'critic_weight',
         'smoothness_weight',
@@ -135,9 +134,11 @@ def generate_all(inference_id, overwrite=False):
             print('Processing sequence %d / %d' % (i + 1, n_examples))
             print(key)
             ex_group = group.require_group(key)
+
             if 'p3w' in ex_group and not overwrite:
                 continue
             example = dataset[key]
+            dt = 1./example.attrs['fps']
             p2 = example['p2']
             r, t, f, c = (example.attrs[k] for k in ['r', 't', 'f', 'c'])
             target_skeleton = skeleton_register[dataset.attrs['skeleton_id']]

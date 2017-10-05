@@ -1,10 +1,8 @@
 """Script for visualizing generator samples."""
 import tensorflow as tf
 import matplotlib.pyplot as plt
-from adversarially_parameterized_optimization.gan import \
-    get_random_generator_input, get_generator_sample
-from adversarially_parameterized_optimization.serialization import \
-    load_gan_params, gan_model_dir
+from gan import get_random_generator_input, get_generator_sample
+from serialization import load_gan_params, gan_model_dir
 from human_pose_util.register import skeleton_register, dataset_register
 
 from human_pose_util.skeleton import vis3d

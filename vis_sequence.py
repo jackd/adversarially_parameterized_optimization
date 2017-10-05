@@ -2,17 +2,17 @@
 import random
 import numpy as np
 import h5py
+from serialization import results_path, load_inference_params
 from human_pose_util.register import dataset_register, skeleton_register
-from adversarially_parameterized_optimization.serialization import \
-    results_path, load_inference_params
 
 
 def vis_data_glumpy(skeleton, fps, ground_truth, inferred):
-    from pose_vis.animated_scene import add_limb_collection_animator
-    from pose_vis.animated_scene import run
+    from human_pose_util.animation.animated_scene import \
+        add_limb_collection_animator
+    from human_pose_util.animation.animated_scene import run
     add_limb_collection_animator(skeleton, inferred, fps, linewidth=2.0)
     add_limb_collection_animator(skeleton, ground_truth, fps, linewidth=4.0)
-    run(fps=10)
+    run(fps=fps)
 
 
 def vis_data_plt(skeleton, ground_truth, inferred):
@@ -33,13 +33,14 @@ def vis_sequence(inference_id, example_id=None, use_plt=True):
         group = f[inference_id]
         if example_id is None:
             example_id = random.sample(list(dataset.keys()), 1)[0]
-        ground_truth = np.array(dataset[example_id]['p3w'])
+        example = dataset[example_id]
+        fps = example.attrs['fps']
+        ground_truth = np.array(example['p3w'])
         inferred = np.array(group[example_id]['p3w'])
 
     if use_plt:
         vis_data_plt(skeleton, ground_truth, inferred)
     else:
-        fps = dataset.attrs['fps']
         vis_data_glumpy(skeleton, fps, ground_truth, inferred)
 
 

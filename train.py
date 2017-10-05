@@ -1,7 +1,6 @@
 """Training script for GAN."""
 import tensorflow as tf
-from adversarially_parameterized_optimization.gan import \
-    pose_gan, get_random_generator_input, get_real_sample
+from gan import pose_gan, get_random_generator_input, get_real_sample
 
 
 def train_pose_gan(gan_id, config=None, **train_args):

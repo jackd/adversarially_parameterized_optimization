@@ -1,10 +1,12 @@
-"""Script for reporting procrustes errors."""
+"""Script for reporting procrustes errors for h3m datasets."""
 import h5py
-from human_pose_util.dataset.h3m.report import report, sequence_report
-from adversarially_parameterized_optimization.serialization import results_path
+from human_pose_util.dataset.h3m.report import proc_manager, \
+    sequence_proc_manager
+from serialization import results_path
 
 
-def inference_report(inference_id, use_s14=False):
+def inference_report(
+        inference_id, overwrite=False, use_s14=False):
     """
     Print procruste errors for previously inferred sequences.
 
@@ -14,11 +16,11 @@ def inference_report(inference_id, use_s14=False):
     with h5py.File(results_path, 'a') as results:
         results = results[inference_id]
         print('Individual proc_err')
-        report(results, use_s14=use_s14)
-        print('----------------')
+        proc_manager().report(results, overwrite=overwrite)
         print('----------------')
         print('Sequence proc_err')
-        sequence_report(results, use_s14=use_s14)
+        sequence_proc_manager().report(
+            results, overwrite=overwrite)
 
 
 if __name__ == '__main__':
@@ -28,7 +30,10 @@ if __name__ == '__main__':
     parser.add_argument(
         'inference_id',
         help='id of inference spec defined in inference_params')
-    parser.add_argument('--use_s14', action='store_true')
+    parser.add_argument(
+        '-o', '--overwrite', action='store_true',
+        help='overwrite existing data if present')
     args = parser.parse_args()
     register_defaults()
-    inference_report(args.inference_id, args.use_s14)
+    inference_report(
+        args.inference_id, overwrite=args.overwrite)

@@ -2,7 +2,8 @@
 from __future__ import division
 import numpy as np
 import tensorflow as tf
-from gan_tf.w_gan import WeightClippedWGan, GradientPenalizedWGan
+from gan_tf.w_gan import \
+    WeightClippedWGan, GradientPenalizedWGan
 from human_pose_util.register import skeleton_register, dataset_register
 from human_pose_util.skeleton import front_angle
 from human_pose_util.transforms.np_impl import rotate_about
