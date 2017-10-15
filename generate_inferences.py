@@ -157,7 +157,7 @@ def generate_all(inference_id, overwrite=False):
 
 if __name__ == '__main__':
     import argparse
-    from human_pose_util.register import register_defaults
+    from serialization import register_defaults
     parser = argparse.ArgumentParser()
     parser.add_argument(
         'inference_id',

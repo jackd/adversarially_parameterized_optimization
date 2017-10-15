@@ -7,6 +7,7 @@ from human_pose_util.register import dataset_register, skeleton_register
 
 
 def vis_data_glumpy(skeleton, fps, ground_truth, inferred):
+    """Visualizes ground_truth/inferred data using glumpy."""
     from human_pose_util.animation.animated_scene import \
         add_limb_collection_animator
     from human_pose_util.animation.animated_scene import run
@@ -16,6 +17,7 @@ def vis_data_glumpy(skeleton, fps, ground_truth, inferred):
 
 
 def vis_data_plt(skeleton, ground_truth, inferred):
+    """Visualizes ground_truth/inferred data using matplotlib.pyplot."""
     from human_pose_util.skeleton import vis3d
     import matplotlib.pyplot as plt
     for i in range(0, len(ground_truth), 10):
@@ -25,6 +27,17 @@ def vis_data_plt(skeleton, ground_truth, inferred):
 
 
 def vis_sequence(inference_id, example_id=None, use_plt=True):
+    """
+    Visualize a previously inferred sequence.
+
+    Args:
+        inference_id: id of the relevant inference set.
+        example_id: example id to visualize. If none, a random example is
+            selected
+        use_plt: if true, uses matplotlib.pyplot for visualizations, otherwise
+            uses glumpy. glumpy visualization is an animation, while plt
+            version gives a number of frames.
+    """
     inference_params = load_inference_params(inference_id)
     dataset = dataset_register[inference_params['dataset']]['eval']
     skeleton = skeleton_register[dataset.attrs['skeleton_id']]
@@ -46,7 +59,7 @@ def vis_sequence(inference_id, example_id=None, use_plt=True):
 
 if __name__ == '__main__':
     import argparse
-    from human_pose_util.register import register_defaults
+    from serialization import register_defaults
 
     parser = argparse.ArgumentParser()
     parser.add_argument(

@@ -10,6 +10,8 @@ Tensorflow implementation for 3DV 2017 conference paper "Adversarially Parameter
 }
 ```
 
+Code used to generate results for the paper has been frozen and can be found in the `3dv2017` branch. Bug fixes and extensions will be applied to other branches.
+
 # Algorithm Overview
 The premise of the paper is to train a GAN to simultaneously learn a parameterization of the feasible human pose space along with a feasibility loss function.
 
@@ -19,9 +21,7 @@ During inference, a standard off-the-shelf optimizer infers all poses from seque
 Each GAN is identified by a `gan_id`. Hyperparameters defining the network structures and datasets from which they should be trained are specified in `gan_params/gan_id.json`. A couple (those with results highlighted in the paper) are provided, `h3m_big`, `h3m_small` and `eva_big`. Note that compared to typical neural networks, these are still tiny, so the difference in size should result in a negligible difference in training/inference time.
 
 Similarly, each inference run is identified by an `inference_id`, the parameters of which are defined in `inference_params/inference_id.json`.
-
-- `gan_tf`: Provides classes for GANs used.
-- `human_pose_util`: Provides utility functions for 3D human pose estimation including geometric transforms, visualizations and dataset reading
+ including geometric transforms, visualizations and dataset reading
 - `gan`: provides application-specific GANs based on specifications in `gan_params`
 - `serialization.py`: i/o related functions for loading hyper-parameters/results
 
@@ -33,18 +33,21 @@ Scripts:
 - `h3m_report.py`/`eva_report.py`: reporting scripts for generated inferences.
 - `vis_sequecne.py`: visualization script for entire inferred sequence.
 
-
 # Usage
-  1. Clone this repository and add the location and the cloned directory to your `PYTHON_PATH`
+  1. Setup the external repositories:
+    * [`human_pose_util`](https://github.com/jackd/human_pose_util)
+    * [`gan_tf`](https://github.com/jackd/human_pose_util) (temporary)
+  2. Clone this repository and add the location and the parent directory(s) to your `PYTHON_PATH`
   ```
   cd path/to/parent_folder
   git clone https://github.com/jackd/adversarially_parameterized_optimization.git
-  export PYTHONPATH=/path/to/parent_folder:/path/to/parent_folder/adversarially_parameterized_optimization:$PYTHONPATH
+  git clone https://github.com/jackd/human_pose_util.git
+  export PYTHONPATH=/path/to/parent_folder:$PYTHONPATH
   cd adversarially_parameterized_optimization
   ```
-  2. Define a GAN model by creating a `gan_params/gan_id.json` file, or select one of the existing ones.
-  3. Setup the specified dataset or create your own. See below for details on how to use `h3m`/`eva` datasets supplied.
-  4. Train the GAN
+  3. Define a GAN model by creating a `gan_params/gan_id.json` file, or select one of the existing ones.
+  4. Setup the relevant dataset(s) or create your own as described in [`human_pose_util`](https://github.com/jackd/human_pose_util).
+  5. Train the GAN
   ```
   python train.py gan_id --max_steps=1e7
   ```
@@ -54,16 +57,16 @@ Scripts:
   ```
   tensorboard --logdir=models
   ```
-  5. (Optional) Check your generator is behaving well by running `gan_generator_vis.py model_id` or interactively by running `interactive_gan_generator_vis.ipynb` and modifying the `model_id`.
-  6. Define an inference specification by creating an `inference_params/inference_id.json` file, or select one of the defaults provided.
-  7. Generate inference
+  6. (Optional) Check your generator is behaving well by running `gan_generator_vis.py model_id` or interactively by running `interactive_gan_generator_vis.ipynb` and modifying the `model_id`.
+  7. Define an inference specification by creating an `inference_params/inference_id.json` file, or select one of the defaults provided.
+  8. Generate inference
   ```
   python generate_inferences.py inference_id
   ```
   Sequence optimization runs at ~5-10fps (speed-up compared to 1fps reported in paper due to reimplementation efficiencies rather than different ideas).
 
   This will save results in `results.hdf5` in the `inference_id` group.
-  8. See the results!
+  9. See the results!
     * `h3m_report.py` or `eva_report.py` depending on the dataset gives qualitative results
   ```
   python report.py eval_id
@@ -72,101 +75,20 @@ Scripts:
   Note that results are quite unstable with respect to GAN training. You may get considerably different quantitative results than those published in the paper, though qualitative behaviour should be similar.
 
 # Serialization
-To aid with experiments with different parameter sets, model/inference parameters are saved in `json` for ease of parsing and human readability. To allow for extensibility, `human_pose_util` maintains registers for different datasets and skeletons.
+To aid with experiments with different parameter sets, model/inference parameters are saved in `json` for ease of parsing and human readability. To allow for extensibility, [`human_pose_util`](https://github.com/jackd/human_pose_util) maintains registers for different datasets and skeletons.
 
-The scripts in this project register some default h3m/eva datasets using `register_defaults`. While normally fast, some data conversion is performed the first time this function is run and requires the original datasets be available with paths defined (see below). If you only wish to experiment with one dataset -- e.g. `h3m` -- modify `register_default_datasets` and `register_default_skeletons` in `human_pose_util.register` by removing registration lines related to `eva`.
+See the [README](https://github.com/jackd/human_pose_util/README.md) for details on setting up/preprocessing of datasets or implementing your own.
+
+The scripts in this project register some default h3m/eva datasets using `register_defaults`. While normally fast, some data conversion is performed the first time this function is run for each dataset and requires the original datasets be available with paths defined (see below). If you only wish to experiment with one dataset -- e.g. `h3m` -- modify the default argument values for `register_defaults`, e.g. `def register_defaults(h3m=True, eva=False):` (or the relevant function calls).
 
 If you implement your own datasets/skeletons, either add their registrations to the default functions, or edit the relevant scripts to register them manually.
 
 # Datasets
-`human_pose_util` comes with support for [Human3.6M](http://vision.imar.ro/human3.6m/description.php) (h3m) and [HumanEva_I](http://humaneva.is.tue.mpg.de/datasets_human_1) (eva) datasets. Due to licensing issues these are not provided here - see the respective websites for details.
-
-## Setting up datasets
-
-### [Human3.6M](http://vision.imar.ro/human3.6m/description.php) (h3m)
-To work with the Human3.6M dataset, you must have the relevant `.cdf` files in an uncompressed local directory, referenced here as `MY_H3M_DIRECTORY`. For licensing reasons, we cannot provide the raw Human3.6m data. Please consult the [website](http://vision.imar.ro/human3.6m/description.php) to source the original data. This directory must have the following structure:
-```
-- MY_H3M_DIRECTORY
-  - D2_positions
-    - S1
-      - Directions.54138969.cdf
-      - ...
-    - S5
-      - ...
-    ...
-  - D3_positions
-    - S1
-    ...
-  - D3_positions_mono
-    - S1
-    ...
-  - Videos
-    - S1
-    ...
-```
-
-`Videos` aren't used in module, though the dataset has a `video_path` attribute which assumes the above structure.
-
-To let the scripts know where to find the data, run the following in a terminal
-```
-export H3M_PATH=/path/to/MY_H3M_DIRECTORY
-```
-
-Consider adding this line to your `.bashrc` if you will be using this a lot.
-
-### [HumanEva_I](http://humaneva.is.tue.mpg.de/datasets_human_1) (eva)
-To work with the HumanEva_I dataset, you must have the uncompressed data available in `MY_EVA_1_DIR` which should have the following structure:
-```
-- MY_EVA_1_DIR
-  - S1
-    - Calibration_Data
-      - BW1.cal
-      ...
-    - Image_Data
-      - Box_1_(BW2).avi
-      ...
-    - Mocap_Data
-      - Box_1.c3d
-      - Box_1.mat
-      ...
-    - Sync_Data
-      - Box_1_(BW1).ofs
-      ...
-  - S2
-    ...
-  ...
-```
-
-`Image_Data` is not used in this module, thought the dataset has a `video_path` attribute which assumes the above structure.
-
-To let scripts know where to find the data, run the following in a terminal
-```
-export H3M_PATH=/home/jackd/Development/datasets/human3p6m/data
-```
-
-Consider adding this line to your `.bashrc` if you will be using this a lot.
-
-## Registering a new dataset
-A new dataset can be registered using
-```
-human_pose_util.register.dataset_register[dataset_id] = {
-    'train': train_datastet,
-    'eval': eval_dataset,
-}
-```
-
-If your dataset uses a different skeleton from those provided (see `human_pose_util.skeleton.Skeleton`), you'll need to precede this with a similar skeleton registration line
-```
-human_pose_util.register.skeleton_register[my_skeleton_id] = my_skeleton
-```
-
-After that, training/inference can procede as normal.
-
-See `human_pose_util.dataset.h3m` and `human_pose_util.dataset.eva` for examples.
+See [`human_pose_util`](https://github.com/jackd/human_pose_util) repository for instructions for setting up datasets.
 
 # Requirements
 For training/inference:
-- tensorflow 1.3
+- tensorflow 1.4
 - numpy
 - h5py
 For visualizations:
@@ -176,10 +98,7 @@ For initial human 3.6m dataset transformations:
 - spacepy (for initial human 3.6m dataset conversion to hdf5)
 
 # Development
-After the conference, this project will not be updated aside from bug fixes and documentation tweaks as reported. I will continue to work on constituent parts in separate repositories, though the versions contained here will be frozen.
-
-  *[`gan_tf`](https://github.com/jackd/gan_tf)
-  *[`human_pose_util`](https://github.com/jackd/human_pose_util)
+This branch will be actively maintained, updated and extended. For code used to generate results for the publication, see the `3dv2017` branch.
 
 # Contact
 Please report any issues/bugs. Feature requests in this repository will largely be ignored, but will be considered if made in independent repositories.

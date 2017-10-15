@@ -9,6 +9,7 @@ from human_pose_util.skeleton import vis3d
 
 
 def vis(gan_id):
+    """Visualize output from the given gan."""
     params = load_gan_params(gan_id)
     skeleton = skeleton_register[
         dataset_register[params['dataset']]['train'].attrs['skeleton_id']]
@@ -37,7 +38,7 @@ def vis(gan_id):
 
 if __name__ == '__main__':
     import argparse
-    from human_pose_util.register import register_defaults
+    from serialization import register_defaults
     parser = argparse.ArgumentParser()
     parser.add_argument(
         'gan_id',

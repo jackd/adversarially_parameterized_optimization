@@ -15,7 +15,7 @@ def train_pose_gan(gan_id, config=None, **train_args):
 
 if __name__ == '__main__':
     import argparse
-    from human_pose_util.register import register_defaults
+    from serialization import register_defaults
     parser = argparse.ArgumentParser()
     parser.add_argument(
         'gan_id',
