@@ -48,5 +48,5 @@ def register_defaults(h3m=True, eva=True):
         from human_pose_util.dataset.h3m.dataset import register_h3m_defaults
         register_h3m_defaults()
     if eva:
-        from human_pose_util.dataset.h3m.dataset import register_eva_defaults
+        from human_pose_util.dataset.eva.dataset import register_eva_defaults
         register_eva_defaults()
