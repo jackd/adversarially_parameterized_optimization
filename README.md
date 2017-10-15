@@ -176,12 +176,7 @@ For initial human 3.6m dataset transformations:
 - spacepy (for initial human 3.6m dataset conversion to hdf5)
 
 # Development
-After the conference, this project will not be updated aside from bug fixes and documentation tweaks as reported. I will continue to work on constituent parts in separate repositories, though the versions contained here will be frozen.
+For the sake of reproducibility, this branch is now frozen aside from the `Known Bugs` section below which will be updated as they become apparent. Development will continue on other branches.
 
-  *[`gan_tf`](https://github.com/jackd/gan_tf)
-  *[`human_pose_util`](https://github.com/jackd/human_pose_util)
-
-# Contact
-Please report any issues/bugs. Feature requests in this repository will largely be ignored, but will be considered if made in independent repositories.
-
-Email contact to discuss ideas/collaborations welcome: `dominic.jack@hdr.qut.edu.au`.
+# Known Bugs
+None at this time.
