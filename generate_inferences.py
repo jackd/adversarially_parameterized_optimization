@@ -3,9 +3,8 @@ import numpy as np
 import tensorflow as tf
 import h5py
 from time import time
-from gan import get_generator_sample, get_critic_logits
-from serialization import \
-    load_inference_params, load_gan_params, gan_model_dir, results_path
+from gan import GanBuilder
+from serialization import load_inference_params, results_path
 from human_pose_util.register import dataset_register, skeleton_register
 from human_pose_util.skeleton import s24_to_s14_converter
 from human_pose_util.dataset.eva.skeleton import s16_to_s14_converter
@@ -18,14 +17,14 @@ def infer_sequence_poses(
         gan_id, p2, r, t, f, c, dt, loss_weights, tol, target_skeleton=None):
     """Get 3d pose inference in world coordinates for a sequence."""
     # p2, r, t, f, c = (example[k] for k in ['p3c', 'r', 't', 'f', 'c'])
-    params = load_gan_params(gan_id)
-    n_z = params['n_z']
+
     n_frames = len(p2)
+    builder = GanBuilder(gan_id)
 
     if target_skeleton is None:
         convert = None
     else:
-        train_dataset = dataset_register[params['dataset']]['train']
+        train_dataset = dataset_register[builder.params['dataset']]['train']
         output_skeleton = skeleton_register[train_dataset.attrs['skeleton_id']]
         if output_skeleton == s24:
             if target_skeleton == s14:
@@ -50,7 +49,7 @@ def infer_sequence_poses(
     with graph.as_default():
 
         z = tf.Variable(
-             np.zeros((n_frames, n_z), dtype=np.float32),
+             np.zeros((n_frames, builder.params['n_z']), dtype=np.float32),
              dtype=tf.float32, name='z')
         scale = tf.Variable(1.65, dtype=tf.float32, name='scale')
         phi = tf.Variable(
@@ -65,8 +64,8 @@ def infer_sequence_poses(
 
         opt_vars = [z, scale, phi, x0, y0]
 
-        normalized_p3 = get_generator_sample(z, params, reuse=False)
-        critic_logits = get_critic_logits(normalized_p3, params, False)
+        normalized_p3 = builder.get_generator_sample(z)
+        critic_logits = builder.get_critic_logits(normalized_p3, z)
         if convert is not None:
             normalized_p3 = convert(normalized_p3)
         p3w = tf_impl.rotate_about(
@@ -98,8 +97,7 @@ def infer_sequence_poses(
             v for v in tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)
             if v not in opt_vars_set]
         saver = tf.train.Saver(model_vars)
-        saver.restore(
-            sess, tf.train.latest_checkpoint(gan_model_dir(gan_id)))
+        saver.restore(sess, builder.latest_checkpoint)
         sess.run(tf.variables_initializer(opt_vars))
         optimizer = tf.contrib.opt.ScipyOptimizerInterface(
             loss, opt_vars, tol=tol)

@@ -1,8 +1,7 @@
 """Script for visualizing generator samples."""
 import tensorflow as tf
 import matplotlib.pyplot as plt
-from gan import get_random_generator_input, get_generator_sample
-from serialization import load_gan_params, gan_model_dir
+from gan import GanBuilder
 from human_pose_util.register import skeleton_register, dataset_register
 
 from human_pose_util.skeleton import vis3d
@@ -10,15 +9,17 @@ from human_pose_util.skeleton import vis3d
 
 def vis(gan_id):
     """Visualize output from the given gan."""
-    params = load_gan_params(gan_id)
+    builder = GanBuilder(gan_id)
     skeleton = skeleton_register[
-        dataset_register[params['dataset']]['train'].attrs['skeleton_id']]
+        dataset_register[
+            builder.params['dataset']]['train'].attrs['skeleton_id']]
 
     print('Building graph...')
     graph = tf.Graph()
     with graph.as_default():
-        gen_input = get_random_generator_input(params)
-        sample = get_generator_sample(gen_input, params, reuse=False)
+        gen_input = builder.get_random_generator_input()
+        with tf.variable_scope('Generator'):
+            sample = builder.get_generator_sample(gen_input)
         generator_vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)
 
     print('Starting session...')
@@ -26,7 +27,7 @@ def vis(gan_id):
         print('Restoring variables...')
         saver = tf.train.Saver(var_list=generator_vars)
         saver.restore(
-            sess, tf.train.latest_checkpoint(gan_model_dir(gan_id)))
+            sess, builder.latest_checkpoint)
         print('Generating...')
         sample_data = sess.run(sample)
 

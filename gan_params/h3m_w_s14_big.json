@@ -1,6 +1,6 @@
 {
-  "dataset": "h3m_consistent_scaled_c1",
-  "wgan_type": "gradient_penalized",
+  "dataset": "h3m_s14_consistent_scaled_c1",
+  "loss_type": "wasserstein",
   "n_z": 32,
   "activation": "relu",
   "n_g": [128, 64],

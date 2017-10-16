@@ -1,6 +1,6 @@
 {
   "dataset": "eva_s14_scaled_c1",
-  "wgan_type": "gradient_penalized",
+  "loss_type": "wasserstein",
   "n_z": 32,
   "activation": "relu",
   "n_g": [128, 64],
