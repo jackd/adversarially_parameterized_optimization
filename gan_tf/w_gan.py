@@ -59,11 +59,10 @@ class WeightClippedWGan(WGan):
         c_ops, g_ops = super(WGan, self).get_train_ops(
             real_logits, fake_logits, global_step)
 
-        critic_vars = self.critic_vars()
         clip_val = self._params['max_critic_var'] \
             if 'max_critic_var' in self._params else 1e-2
         c_clip = [p.assign(tf.clip_by_value(p, -clip_val, clip_val))
-                  for p in critic_vars]
+                  for p in self._critic_vars]
         c_ops['clip'] = c_clip
         return c_ops, g_ops
 
