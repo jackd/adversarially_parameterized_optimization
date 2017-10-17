@@ -1,6 +1,7 @@
 {
   "dataset": "eva_s14_scaled_c1",
   "loss_type": "wasserstein",
+  "discriminator_clip_val": 0.01,
   "n_z": 32,
   "activation": "relu",
   "n_g": [128, 64],

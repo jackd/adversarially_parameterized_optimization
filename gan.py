@@ -32,6 +32,34 @@ _discriminator_losses = {
 }
 
 
+class WeightClippedDisciminatorOptimizer(object):
+    def __init__(self, base_optimizer, clip_val):
+        self._data = base_optimizer, clip_val
+
+    def __getattribute__(self, name):
+        print('Getting %s' % name)
+        base_opt, clip_val = object.__getattribute__(self, '_data')
+        base_attr = getattr(base_opt, name)
+
+        if name == 'apply_gradients':
+
+            def apply_gradients(*args, **kwargs):
+                var_list = tf.get_collection(
+                    tf.GraphKeys.GLOBAL_VARIABLES, scope='Discriminator')
+                apply_op = base_attr(*args, **kwargs)
+                with tf.control_dependencies([apply_op]):
+                    # for v in var_list:
+                    #     tf.summary.histogram(
+                    #         v.name, v, family='disc_weights')
+                    ops = [tf.assign(v, tf.clip_by_value(
+                           v, -clip_val, clip_val)) for v in var_list]
+                    op = tf.group(*ops)
+                return op
+            return apply_gradients
+        else:
+            return base_attr
+
+
 class GanBuilder(object):
     """Builder class for GANEstimator (and other related utilities)."""
 
@@ -124,7 +152,7 @@ class GanBuilder(object):
     def get_real_sample(self):
         """Get a tensor of real human poses for use by critic."""
         p3_np = self._get_np_data()
-        dataset = tf.contrib.data.Dataset.from_tensor_slices(p3_np)
+        dataset = tf.data.Dataset.from_tensor_slices(p3_np)
         dataset = dataset.shuffle(100000).repeat().batch(
             self.params['batch_size'])
         p3 = dataset.make_one_shot_iterator().get_next()
@@ -136,16 +164,29 @@ class GanBuilder(object):
         generator_loss_fn = _generator_losses[loss_type]
         discriminator_loss_fn = _discriminator_losses[loss_type]
 
-        # args = [get_generator_sample, get_critic_logits]
-        # kwargs = dict(
-        #     config=config, params=params, model_dir=gan_model_dir(gan_id),
-        #     name=gan_id)
-        model_dir = gan_model_dir(self.id)
         # generator_optimizer = tf.train.AdamOptimizer(0.1, 0.5)
-        generator_optimizer = tf.train.AdamOptimizer(1e-4)
-        discriminator_optimizer = tf.train.AdamOptimizer(1e-4)
+        # discriminator_optimizer = tf.train.AdamOptimizer(0.1, 0.5)
+        generator_optimizer = tf.train.RMSPropOptimizer(1e-4)
+        discriminator_optimizer = tf.train.RMSPropOptimizer(1e-4)
+        # generator_optimizer = tf.train.AdamOptimizer(1e-4)
+        # discriminator_optimizer = tf.train.AdamOptimizer(1e-4)
+        if 'discriminator_clip_val' in self.params:
+            discriminator_optimizer = WeightClippedDisciminatorOptimizer(
+                discriminator_optimizer, self.params['discriminator_clip_val'])
+            # base_op = discriminator_optimizer
+            #
+            # def discriminator_optimizer():
+            #     var_list = tf.get_collection(
+            #         tf.GraphKeys.GLOBAL_VARIABLES, scope='Discriminator')
+            #     clip_val = self.params['discriminator_clip_val']
+            #     for v in var_list:
+            #         tf.summary.histogram(v.name, v, family="disc_var")
+            #         clip_op = tf.clip_by_value(v, -clip_val, clip_val)
+            #         tf.add_to_collection(tf.GraphKeys.TRAIN_OP, clip_op)
+            #     return base_op
+
         return tfgan.estimator.GANEstimator(
-            model_dir=model_dir,
+            model_dir=self.model_dir,
             generator_fn=self.get_generator_sample,
             discriminator_fn=self.get_critic_logits,
             generator_loss_fn=generator_loss_fn,
@@ -155,6 +196,11 @@ class GanBuilder(object):
         )
 
     @property
+    def model_dir(self):
+        """Get the model directoy in which this builder saves."""
+        return gan_model_dir(self.id)
+
+    @property
     def latest_checkpoint(self):
         """Get the latest checkpoint for this model."""
-        return tf.train.latest_checkpoint(gan_model_dir(self.id))
+        return tf.train.latest_checkpoint(self.model_dir)

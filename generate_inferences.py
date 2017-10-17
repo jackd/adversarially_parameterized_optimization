@@ -16,8 +16,6 @@ from human_pose_util.dataset.eva.skeleton import s16, s14
 def infer_sequence_poses(
         gan_id, p2, r, t, f, c, dt, loss_weights, tol, target_skeleton=None):
     """Get 3d pose inference in world coordinates for a sequence."""
-    # p2, r, t, f, c = (example[k] for k in ['p3c', 'r', 't', 'f', 'c'])
-
     n_frames = len(p2)
     builder = GanBuilder(gan_id)
 
@@ -64,8 +62,10 @@ def infer_sequence_poses(
 
         opt_vars = [z, scale, phi, x0, y0]
 
-        normalized_p3 = builder.get_generator_sample(z)
-        critic_logits = builder.get_critic_logits(normalized_p3, z)
+        with tf.variable_scope('Generator'):
+            normalized_p3 = builder.get_generator_sample(z)
+        with tf.variable_scope('Discriminator'):
+            critic_logits = builder.get_critic_logits(normalized_p3, z)
         if convert is not None:
             normalized_p3 = convert(normalized_p3)
         p3w = tf_impl.rotate_about(
