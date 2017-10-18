@@ -32,34 +32,6 @@ _discriminator_losses = {
 }
 
 
-class WeightClippedDisciminatorOptimizer(object):
-    def __init__(self, base_optimizer, clip_val):
-        self._data = base_optimizer, clip_val
-
-    def __getattribute__(self, name):
-        print('Getting %s' % name)
-        base_opt, clip_val = object.__getattribute__(self, '_data')
-        base_attr = getattr(base_opt, name)
-
-        if name == 'apply_gradients':
-
-            def apply_gradients(*args, **kwargs):
-                var_list = tf.get_collection(
-                    tf.GraphKeys.GLOBAL_VARIABLES, scope='Discriminator')
-                apply_op = base_attr(*args, **kwargs)
-                with tf.control_dependencies([apply_op]):
-                    # for v in var_list:
-                    #     tf.summary.histogram(
-                    #         v.name, v, family='disc_weights')
-                    ops = [tf.assign(v, tf.clip_by_value(
-                           v, -clip_val, clip_val)) for v in var_list]
-                    op = tf.group(*ops)
-                return op
-            return apply_gradients
-        else:
-            return base_attr
-
-
 class GanBuilder(object):
     """Builder class for GANEstimator (and other related utilities)."""
 
@@ -171,19 +143,20 @@ class GanBuilder(object):
         # generator_optimizer = tf.train.AdamOptimizer(1e-4)
         # discriminator_optimizer = tf.train.AdamOptimizer(1e-4)
         if 'discriminator_clip_val' in self.params:
-            discriminator_optimizer = WeightClippedDisciminatorOptimizer(
-                discriminator_optimizer, self.params['discriminator_clip_val'])
-            # base_op = discriminator_optimizer
-            #
-            # def discriminator_optimizer():
-            #     var_list = tf.get_collection(
-            #         tf.GraphKeys.GLOBAL_VARIABLES, scope='Discriminator')
-            #     clip_val = self.params['discriminator_clip_val']
-            #     for v in var_list:
-            #         tf.summary.histogram(v.name, v, family="disc_var")
-            #         clip_op = tf.clip_by_value(v, -clip_val, clip_val)
-            #         tf.add_to_collection(tf.GraphKeys.TRAIN_OP, clip_op)
-            #     return base_op
+            clip_val = self.params['discriminator_clip_val']
+            original_fn = discriminator_optimizer.apply_gradients
+
+            def modified_fn(*args, **kwargs):
+                op = original_fn(*args, **kwargs)
+                var_list = tf.get_collection(
+                    tf.GraphKeys.GLOBAL_VARIABLES, scope='Discriminator')
+                with tf.control_dependencies([op]):
+                    ops = [tf.assign(v, tf.clip_by_value(
+                                     v, -clip_val, clip_val))
+                           for v in var_list]
+                    op = tf.group(*ops)
+                return op
+            discriminator_optimizer.apply_gradients = modified_fn
 
         return tfgan.estimator.GANEstimator(
             model_dir=self.model_dir,
@@ -192,7 +165,7 @@ class GanBuilder(object):
             generator_loss_fn=generator_loss_fn,
             discriminator_loss_fn=discriminator_loss_fn,
             generator_optimizer=generator_optimizer,
-            discriminator_optimizer=discriminator_optimizer,
+            discriminator_optimizer=discriminator_optimizer
         )
 
     @property
