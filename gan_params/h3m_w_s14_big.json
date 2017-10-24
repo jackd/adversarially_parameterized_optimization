@@ -1,5 +1,18 @@
 {
-  "dataset": "h3m_s14_consistent_scaled_c1",
+  "dataset": {
+    "type": "h3m",
+    "filter_kwargs": {
+        "camera_idxs": [1]
+    },
+    "normalize_kwargs": {
+      "skeleton_id": "s14",
+      "pixel_scale": 1000,
+      "space_scale": 1000,
+      "consistent_pose": true,
+      "consistent_projection": true,
+      "fps": 10
+    }
+  },
   "loss_type": "wasserstein",
   "n_z": 32,
   "activation": "relu",

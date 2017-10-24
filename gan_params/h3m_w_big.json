@@ -1,5 +1,16 @@
 {
-  "dataset": "h3m_consistent_scaled_c1",
+  "dataset": {
+    "type": "h3m",
+    "filter_kwargs": {
+        "camera_idxs": [1]
+    },
+    "normalize_kwargs": {
+      "skeleton_id": "s24",
+      "consistent_pose": true,
+      "consistent_projection": true,
+      "scale_to_height": true
+    }
+  },
   "loss_type": "wasserstein",
   "discriminator_clip_val": 0.01,
   "n_z": 32,

@@ -5,43 +5,24 @@ import h5py
 from time import time
 from gan import GanBuilder
 from serialization import load_inference_params, results_path
-from human_pose_util.register import dataset_register, skeleton_register
-from human_pose_util.skeleton import s24_to_s14_converter
-from human_pose_util.dataset.eva.skeleton import s16_to_s14_converter
+from serialization import inference_params_path
+from human_pose_util.register import get_dataset, get_converter
+from human_pose_util.dataset.normalize import normalize_dataset, filter_dataset
+from human_pose_util.dataset.group import copy_group
 from human_pose_util.transforms.tf_impl import tf_impl
-from human_pose_util.dataset.h3m.skeleton import s24
-from human_pose_util.dataset.eva.skeleton import s16, s14
 
 
 def infer_sequence_poses(
-        gan_id, p2, r, t, f, c, dt, loss_weights, tol, target_skeleton=None):
+        gan_id, p2, r, t, f, c, dt, loss_weights, tol,
+        target_skeleton_id=None):
     """Get 3d pose inference in world coordinates for a sequence."""
     n_frames = len(p2)
     builder = GanBuilder(gan_id)
-
-    if target_skeleton is None:
+    skeleton_id = builder.params['dataset']['kwargs']['skeleton_id']
+    if skeleton_id == target_skeleton_id:
         convert = None
     else:
-        train_dataset = dataset_register[builder.params['dataset']]['train']
-        output_skeleton = skeleton_register[train_dataset.attrs['skeleton_id']]
-        if output_skeleton == s24:
-            if target_skeleton == s14:
-                convert = s24_to_s14_converter().convert_tf
-            elif target_skeleton == s24:
-                convert = None
-            else:
-                raise ValueError('Not valid skeleton combination')
-        elif output_skeleton == s16:
-            if target_skeleton == s14:
-                convert = s16_to_s14_converter().convert_tf
-            elif target_skeleton == s16:
-                convert = None
-            else:
-                raise ValueError('Not valid skeleton combination')
-        elif output_skeleton == s14:
-            convert = None
-        else:
-            raise ValueError('Not valid skeleton combination')
+        convert = get_converter(skeleton_id, target_skeleton_id).convert_tf
 
     graph = tf.Graph()
     with graph.as_default():
@@ -113,8 +94,13 @@ def generate_all(inference_id, overwrite=False):
     """Generate all results for the specified model/dataset."""
     inference_params = load_inference_params(inference_id)
     gan_id = inference_params['gan_id']
-    dataset_id = inference_params['dataset']
-    dataset = dataset_register[dataset_id]['eval']
+    dataset_params = inference_params['dataset']
+    dataset = get_dataset(dataset_params['type'])
+    dataset = filter_dataset(
+        dataset, modes=['eval'], **dataset_params['filter_kwargs'])
+    dataset = copy_group(dataset)
+    dataset = normalize_dataset(dataset, **dataset_params['normalize_kwargs'])
+    target_skeleton_id = dataset.attrs['skeleton_id']
     loss_weights = {k: inference_params[k] for k in [
         'critic_weight',
         'smoothness_weight',
@@ -124,24 +110,20 @@ def generate_all(inference_id, overwrite=False):
     tol = inference_params['tol']
     with h5py.File(results_path, 'a') as f:
         group = f.require_group(inference_id)
-        for k, v in inference_params.items():
-            if k not in group.attrs:
-                group.attrs[k] = v
+        group.attrs['params_path'] = inference_params_path(inference_id)
         n_examples = len(dataset)
         for i, key in enumerate(dataset):
             print('Processing sequence %d / %d' % (i + 1, n_examples))
-            print(key)
             ex_group = group.require_group(key)
-
             if 'p3w' in ex_group and not overwrite:
                 continue
-            example = dataset[key]
-            dt = 1./example.attrs['fps']
-            p2 = example['p2']
-            r, t, f, c = (example.attrs[k] for k in ['r', 't', 'f', 'c'])
-            target_skeleton = skeleton_register[dataset.attrs['skeleton_id']]
+            sequence = dataset[key]
+            dt = 1./sequence.attrs['fps']
+            p2 = sequence['p2']
+            r, t, f, c = (sequence.attrs[k] for k in ['r', 't', 'f', 'c'])
             p3w, dt = infer_sequence_poses(
-                gan_id, p2, r, t, f, c, dt, loss_weights, tol, target_skeleton)
+                gan_id, p2, r, t, f, c, dt, loss_weights, tol,
+                target_skeleton_id)
             n_frames = len(p2)
             fps = n_frames / dt
             print('Completed %d frames in %.2fs @ %.2f fps'

@@ -1,5 +1,18 @@
 {
-  "dataset": "h3m_consistent_scaled_c1_10fps",
+  "dataset": {
+    "type": "h3m",
+    "filter_kwargs": {
+        "camera_idxs": [1]
+    },
+    "normalize_kwargs": {
+      "skeleton_id": "s24",
+      "pixel_scale": 1000,
+      "space_scale": 1000,
+      "consistent_pose": true,
+      "consistent_projection": true,
+      "fps": 10
+    }
+  },
   "gan_id": "h3m_w_big",
   "critic_weight": 0,
   "smoothness_weight": 0,

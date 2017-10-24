@@ -1,11 +1,11 @@
 """Training script for GAN."""
 import tensorflow as tf
 from gan import GanBuilder
+from serialization import register_defaults
 
 
 if __name__ == '__main__':
     import argparse
-    from serialization import register_defaults
     parser = argparse.ArgumentParser()
     parser.add_argument(
         'gan_id',

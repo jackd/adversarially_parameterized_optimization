@@ -1,5 +1,11 @@
 {
-  "dataset": "eva_s14_scaled_c1",
+  "dataset": {
+    "type": "eva",
+    "kwargs": {
+      "camera_idxs": [1],
+      "skeleton_id": "s14"
+    }
+  },
   "loss_type": "wasserstein",
   "discriminator_clip_val": 0.01,
   "n_z": 32,

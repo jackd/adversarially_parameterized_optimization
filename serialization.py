@@ -39,14 +39,9 @@ def load_inference_params(inference_id):
     return _checked_load(inference_params_path(inference_id))
 
 
+def register_defaults():
+    from human_pose_util.register import register_datasets
+    register_datasets(h3m=True, eva=True)
+
+
 results_path = os.path.join(_root_dir, 'results.hdf5')
-
-
-def register_defaults(h3m=True, eva=True):
-    """Register default skeletons and datasets."""
-    if h3m:
-        from human_pose_util.dataset.h3m.dataset import register_h3m_defaults
-        register_h3m_defaults()
-    if eva:
-        from human_pose_util.dataset.eva.dataset import register_eva_defaults
-        register_eva_defaults()

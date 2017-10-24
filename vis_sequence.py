@@ -3,7 +3,7 @@ import random
 import numpy as np
 import h5py
 from serialization import results_path, load_inference_params
-from human_pose_util.register import dataset_register, skeleton_register
+from human_pose_util.register import get_dataset, get_skeleton
 
 
 def vis_data_glumpy(skeleton, fps, ground_truth, inferred):
@@ -39,13 +39,13 @@ def vis_sequence(inference_id, example_id=None, use_plt=True):
             version gives a number of frames.
     """
     inference_params = load_inference_params(inference_id)
-    dataset = dataset_register[inference_params['dataset']]['eval']
-    skeleton = skeleton_register[dataset.attrs['skeleton_id']]
+    dataset = get_dataset(inference_params['dataset']['type'])
+    skeleton = get_skeleton(dataset.attrs['skeleton_id'])
 
     with h5py.File(results_path, 'r') as f:
         group = f[inference_id]
         if example_id is None:
-            example_id = random.sample(list(dataset.keys()), 1)[0]
+            example_id = random.sample(list(group.keys()), 1)[0]
         example = dataset[example_id]
         fps = example.attrs['fps']
         ground_truth = np.array(example['p3w'])

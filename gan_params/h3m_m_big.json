@@ -1,5 +1,11 @@
 {
-  "dataset": "h3m_consistent_scaled_c1",
+  "dataset": {
+    "type": "h3m",
+    "kwargs": {
+      "camera_idxs": [1],
+      "skeleton_id": "s24"
+    }
+  },
   "loss_type": "modified",
   "n_z": 32,
   "activation": "relu",
