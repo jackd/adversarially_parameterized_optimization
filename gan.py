@@ -2,12 +2,11 @@
 from __future__ import division
 import tensorflow as tf
 import tensorflow.contrib.gan as tfgan
-from human_pose_util.register import get_skeleton, get_dataset
-from human_pose_util.dataset.normalize import \
-    filter_dataset, normalize_dataset, dataset_to_p3w
-from human_pose_util.dataset.group import copy_group
+from human_pose_util.register import get_skeleton
+from human_pose_util.dataset.normalize import dataset_to_p3w
 from adversarially_parameterized_optimization.serialization import \
     load_gan_params, gan_model_dir
+from data import get_normalized_dataset
 
 
 _activations = {
@@ -101,12 +100,7 @@ class GanBuilder(object):
     def _get_np_data(self):
         """Get numpy data used to train critic."""
         dataset_params = self.params['dataset']
-        dataset = get_dataset(dataset_params['type'])
-        dataset = filter_dataset(
-            dataset, modes=['train'], **dataset_params['filter_kwargs'])
-        dataset = copy_group(dataset)
-        dataset = normalize_dataset(
-            dataset, **dataset_params['normalize_kwargs'])
+        dataset = get_normalized_dataset(self.params['dataset'])
         p3w = dataset_to_p3w(dataset, rotate_front=True, recenter_xy=True)
         return p3w
 

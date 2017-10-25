@@ -6,16 +6,17 @@
     },
     "normalize_kwargs": {
       "skeleton_id": "s24",
+      "pixel_scale": 1000,
+      "space_scale": 1000,
       "consistent_pose": true,
       "consistent_projection": true,
-      "scale_to_height": true
+      "fps": 10
     }
   },
-  "loss_type": "wasserstein",
-  "discriminator_clip_val": 0.01,
-  "n_z": 8,
-  "activation": "relu",
-  "n_g": [32],
-  "n_c": [32],
-  "batch_size": 128
+  "gan_id": "h3m_w_small",
+  "critic_weight": 0,
+  "smoothness_weight": 0,
+  "glide_weight": 0,
+  "consistency_weight": 1.0,
+  "tol": 1e-9
 }

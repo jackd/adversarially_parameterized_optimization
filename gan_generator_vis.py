@@ -10,7 +10,8 @@ from human_pose_util.skeleton import vis3d
 def vis(gan_id):
     """Visualize output from the given gan."""
     builder = GanBuilder(gan_id)
-    skeleton = get_skeleton(builder.params['dataset']['kwargs']['skeleton_id'])
+    skeleton = get_skeleton(
+        builder.params['dataset']['normalize_kwargs']['skeleton_id'])
 
     print('Building graph...')
     graph = tf.Graph()

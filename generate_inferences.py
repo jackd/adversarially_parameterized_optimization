@@ -6,10 +6,9 @@ from time import time
 from gan import GanBuilder
 from serialization import load_inference_params, results_path
 from serialization import inference_params_path
-from human_pose_util.register import get_dataset, get_converter
-from human_pose_util.dataset.normalize import normalize_dataset, filter_dataset
-from human_pose_util.dataset.group import copy_group
+from human_pose_util.register import get_converter
 from human_pose_util.transforms.tf_impl import tf_impl
+from data import get_normalized_dataset
 
 
 def infer_sequence_poses(
@@ -18,7 +17,7 @@ def infer_sequence_poses(
     """Get 3d pose inference in world coordinates for a sequence."""
     n_frames = len(p2)
     builder = GanBuilder(gan_id)
-    skeleton_id = builder.params['dataset']['kwargs']['skeleton_id']
+    skeleton_id = builder.params['dataset']['normalize_kwargs']['skeleton_id']
     if skeleton_id == target_skeleton_id:
         convert = None
     else:
@@ -94,12 +93,7 @@ def generate_all(inference_id, overwrite=False):
     """Generate all results for the specified model/dataset."""
     inference_params = load_inference_params(inference_id)
     gan_id = inference_params['gan_id']
-    dataset_params = inference_params['dataset']
-    dataset = get_dataset(dataset_params['type'])
-    dataset = filter_dataset(
-        dataset, modes=['eval'], **dataset_params['filter_kwargs'])
-    dataset = copy_group(dataset)
-    dataset = normalize_dataset(dataset, **dataset_params['normalize_kwargs'])
+    dataset = get_normalized_dataset(inference_params['dataset'])
     target_skeleton_id = dataset.attrs['skeleton_id']
     loss_weights = {k: inference_params[k] for k in [
         'critic_weight',

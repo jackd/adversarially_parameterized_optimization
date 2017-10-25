@@ -1,9 +1,11 @@
 """Script for visualizing an inferred sequence along with ground truth data."""
+from __future__ import division
 import random
 import numpy as np
 import h5py
 from serialization import results_path, load_inference_params
-from human_pose_util.register import get_dataset, get_skeleton
+from human_pose_util.register import get_skeleton
+from data import get_normalized_dataset
 
 
 def vis_data_glumpy(skeleton, fps, ground_truth, inferred):
@@ -11,8 +13,10 @@ def vis_data_glumpy(skeleton, fps, ground_truth, inferred):
     from human_pose_util.animation.animated_scene import \
         add_limb_collection_animator
     from human_pose_util.animation.animated_scene import run
-    add_limb_collection_animator(skeleton, inferred, fps, linewidth=2.0)
-    add_limb_collection_animator(skeleton, ground_truth, fps, linewidth=4.0)
+    add_limb_collection_animator(
+        skeleton, inferred, fps, linewidth=2.0)
+    add_limb_collection_animator(
+        skeleton, ground_truth, fps, linewidth=4.0)
     run(fps=fps)
 
 
@@ -39,17 +43,21 @@ def vis_sequence(inference_id, example_id=None, use_plt=True):
             version gives a number of frames.
     """
     inference_params = load_inference_params(inference_id)
-    dataset = get_dataset(inference_params['dataset']['type'])
+    dataset = get_normalized_dataset(inference_params['dataset'])
     skeleton = get_skeleton(dataset.attrs['skeleton_id'])
 
     with h5py.File(results_path, 'r') as f:
         group = f[inference_id]
+        params = load_inference_params(inference_id)
         if example_id is None:
             example_id = random.sample(list(group.keys()), 1)[0]
         example = dataset[example_id]
         fps = example.attrs['fps']
-        ground_truth = np.array(example['p3w'])
-        inferred = np.array(group[example_id]['p3w'])
+        ground_truth = np.array(example['p3w']) * \
+            example.attrs['space_scale'] / 1000
+
+        inferred = np.array(group[example_id]['p3w']) * \
+            params['dataset']['normalize_kwargs']['pixel_scale'] / 1000
 
     if use_plt:
         vis_data_plt(skeleton, ground_truth, inferred)
