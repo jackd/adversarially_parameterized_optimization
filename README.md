@@ -36,8 +36,7 @@ Scripts:
 # Usage
   1. Setup the external repositories:
     * [`human_pose_util`](https://github.com/jackd/human_pose_util)
-    * [`gan_tf`](https://github.com/jackd/human_pose_util) (temporary)
-  2. Clone this repository and add the location and the parent directory(s) to your `PYTHON_PATH`
+  2. Clone this repository and add the location and the parent directory(s) to your `PYTHONPATH`
   ```
   cd path/to/parent_folder
   git clone https://github.com/jackd/adversarially_parameterized_optimization.git
